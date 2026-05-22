@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JJK DIGITAL MARKETPLACE – Roblox Scripts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #050509;
+      --card: #101018;
+      --accent: #ff143c;
+      --accent-soft: rgba(255, 20, 60, 0.35);
+      --text-main: #f5f5f5;
+      --text-muted: #a0a0b5;
+      --border-soft: #2a2a3a;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --shadow-glow: 0 0 25px rgba(255, 20, 60, 0.7);
+      --transition-fast: 0.18s ease-out;
+      --transition-med: 0.25s ease-out;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: radial-gradient(circle at top, #14000a 0, #050509 45%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Subtle animated background glow */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255, 20, 60, 0.35), transparent 55%),
+        radial-gradient(circle at -10% 80%, rgba(255, 20, 60, 0.18), transparent 55%),
+        radial-gradient(circle at 110% 80%, rgba(255, 20, 60, 0.18), transparent 55%);
+      opacity: 0.9;
+      z-index: -2;
+      animation: bgPulse 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes bgPulse {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    .glow-ring {
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 20, 60, 0.7);
+      box-shadow:
+        0 0 40px rgba(255, 20, 60, 0.9),
+        0 0 120px rgba(255, 20, 60, 0.7);
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%);
+      filter: blur(0.3px);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .glow-ring::before,
+    .glow-ring::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 25px rgba(255, 20, 60, 0.6);
+    }
+
+    .glow-ring::after {
+      inset: 32%;
+      border-style: solid;
+      border-color: rgba(255, 20, 60, 0.6);
+      opacity: 0.7;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: linear-gradient(
+        to bottom,
+        rgba(5, 5, 12, 0.96),
+        rgba(5, 5, 12, 0.85),
+        transparent
+      );
+      border-bottom: 1px solid rgba(255, 20, 60, 0.25);
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: radial-gradient(circle, #ff143c, #5a0015);
+      box-shadow: 0 0 18px rgba(255, 20, 60, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-text-main {
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .brand-text-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-link {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      transition: color var(--transition-fast), border-color var(--transition-fast),
+        background var(--transition-fast);
+    }
+
+    .nav-link:hover {
+      color: var(--text-main);
+      border-color: rgba(255, 20, 60, 0.4);
+      background: rgba(255, 20, 60, 0.08);
+    }
+
+    .btn-primary {
+      position: relative;
+      border-radius: 999px;
+      padding: 8px 18px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      background: radial-gradient(circle at 0 0, #ff5a7a, #ff143c);
+      box-shadow: 0 0 18px rgba(255, 20, 60, 0.9);
+      overflow: hidden;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .btn-primary::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 255, 255, 0.2),
+        transparent 40%,
+        transparent 60%,
+        rgba(255, 255, 255, 0.2)
+      );
+      opacity: 0;
+      transform: translateX(-40%);
+      transition: opacity 0.35s ease-out, transform 0.35s ease-out;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 0 26px rgba(255, 20, 60, 1);
+    }
+
+    .btn-primary:hover::after {
+      opacity: 1;
+      transform: translateX(40%);
+    }
+
+    main {
+      flex: 1;
+    }
+
+    .hero {
+      position: relative;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 72px 18px 40px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 20, 60, 0.5);
+      background: rgba(5, 5, 12, 0.9);
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      margin-bottom: 18px;
+    }
+
+    .hero-badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #ff143c;
+      box-shadow: 0 0 10px rgba(255, 20, 60, 0.9);
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 5vw, 46px);
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      text-shadow:
+        0 0 18px rgba(255, 20, 60, 0.8),
+        0 0 40px rgba(255, 20, 60, 0.6);
+    }
+
+    .hero-title span {
+      color: var(--accent);
+    }
+
+    .hero-subtitle {
+      max-width: 520px;
+      margin: 0 auto 22px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .hero-cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+    }
+
+    .hero-meta {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    .hero-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hero-meta-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 20, 60, 0.7);
+    }
+
+    .section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 10px 18px 40px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .section-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .product-card {
+      position: relative;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at top, #181824, #090912);
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 0 0 1px rgba(255, 20, 60, 0.08);
+      padding: 14px 14px 16px;
+      overflow: hidden;
+      transition: transform var(--transition-med), box-shadow var(--transition-med),
+        border-color var(--transition-med), background var(--transition-med);
+    }
+
+    .product-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at top, rgba(255, 20, 60, 0.18), transparent 55%);
+      opacity: 0;
+      transition: opacity var(--transition-med);
+      pointer-events: none;
+    }
+
+    .product-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 20, 60, 0.7);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .product-card:hover::before {
+      opacity: 1;
+    }
+
+    .product-tag-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .product-tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 20, 60, 0.5);
+      background: rgba(5, 5, 12, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .product-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .product-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      min-height: 32px;
+    }
+
+    .product-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .product-meta-row span strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .product-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .product-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .btn-ghost {
+      border-radius: 999px;
+      padding: 7px 14px;
+      border: 1px solid rgba(255, 20, 60, 0.5);
+      background: rgba(5, 5, 12, 0.9);
+      color: var(--text-main);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast),
+        border-color var(--transition-fast), transform var(--transition-fast);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 20, 60, 0.16);
+      border-color: rgba(255, 20, 60, 0.9);
+      transform: translateY(-1px);
+    }
+
+    .featured-strip {
+      margin-top: 10px;
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      background: linear-gradient(
+        120deg,
+        rgba(255, 20, 60, 0.18),
+        rgba(5, 5, 12, 0.96)
+      );
+      border: 1px solid rgba(255, 20, 60, 0.6);
+      box-shadow: 0 0 22px rgba(255, 20, 60, 0.7);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .featured-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #ffe5ec;
+    }
+
+    .featured-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .featured-meta {
+      font-size: 11px;
+      color: #ffd0dd;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #ffe5ec;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 14px;
+    }
+
+    .benefit-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: rgba(5, 5, 12, 0.96);
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .benefit-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle, var(--accent), #5a0015);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 0 14px rgba(255, 20, 60, 0.9);
+      flex-shrink: 0;
+    }
+
+    .benefit-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .benefit-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .testimonials {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .testimonial-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: radial-gradient(circle at top, #181824, #050509);
+      padding: 12px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .testimonial-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 20, 60, 0.18),
+        transparent 50%,
+        rgba(255, 20, 60, 0.12)
+      );
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .testimonial-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .avatar-ring {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 20, 60, 0.8);
+      box-shadow: 0 0 14px rgba(255, 20, 60, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .testimonial-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .testimonial-role {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .testimonial-text {
+      font-size: 12px;
+      color: var(--text-main);
+      position: relative;
+      z-index: 1;
+    }
+
+    footer {
+      border-top: 1px solid rgba(255, 20, 60, 0.35);
+      background: #050509;
+      padding: 14px 18px 18px;
+      margin-top: 10px;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+
+    .footer-link:hover {
+      color: var(--accent);
+    }
+
+    @media (max-width: 640px) {
+      .glow-ring {
+        width: 320px;
+        height: 320px;
+        top: -60px;
+      }
+      .hero {
+        padding-top: 64px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-ring"></div>
+
+  <header>
+    <div class="nav-inner">
+      <div class="brand">
+        <div class="brand-logo">J</div>
+        <div>
+          <div class="brand-text-main">JJK DIGITAL MARKETPLACE</div>
+          <div class="brand-text-sub">Roblox scripts</div>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <a href="#products" class="nav-link">Products</a>
+        <a href="#why" class="nav-link">Why JJK</a>
+        <a href="#trust" class="nav-link">Trust</a>
+        <button class="btn-primary" onclick="scrollToProducts()">Browse Scripts</button>
+      </div>
+    </div>
+  </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-badge">
+          <div class="hero-badge-dot"></div>
+          VERIFIED ROBLOX SCRIPT HUB
+        </div>
+        <h1 class="hero-title">
+          <span>JJK</span> DIGITAL MARKETPLACE
+        </h1>
+        <p class="hero-subtitle">
+          Premium Roblox scripts with clean UIs, frequent updates, and instant delivery.
+          Built for players who want an edge—without the bloat.
+        </p>
+        <div class="hero-cta-row">
+          <button class="btn-primary" onclick="scrollToProducts()">Browse Scripts</button>
+          <button class="btn-ghost" onclick="scrollToWhy()">Why JJK?</button>
+        </div>
+        <div class="hero-meta">
+          <span><span class="hero-meta-dot"></span> Optimized for performance</span>
+          <span><span class="hero-meta-dot"></span> Instant digital delivery</span>
+          <span><span class="hero-meta-dot"></span> Lifetime script updates</span>
+        </div>
+      </section>
+
+      <section class="section" id="products">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Featured Roblox scripts</div>
+            <div class="section-subtitle">
+              Hand‑picked scripts designed for stability, performance, and clean execution.
+            </div>
+          </div>
+          <button class="btn-ghost">View all (soon)</button>
+        </div>
+
+        <div class="product-grid">
+          <article class="product-card">
+            <div class="product-tag-row">
+              <span class="product-tag">Combat</span>
+              <span>Updated: 2026‑05</span>
+            </div>
+            <h3 class="product-title">JJK Universal Combat Script</h3>
+            <p class="product-desc">
+              Smooth aimbot assist, hitbox tweaks, and anti‑lag optimizations for popular combat‑based Roblox games.
+            </p>
+            <div class="product-meta-row">
+              <span>Games supported: <strong>12+</strong></span>
+              <span>Updates: <strong>Lifetime</strong></span>
+            </div>
+            <div class="product-price-row">
+              <div class="product-price">$9.99</div>
+              <button class="btn-ghost">Instant Download</button>
+            </div>
+          </article>
+
+          <article class="product-card">
+            <div class="product-tag-row">
+              <span class="product-tag">Farming</span>
+              <span>Updated: 2026‑05</span>
+            </div>
+            <h3 class="product-title">Auto‑Farm Pro Suite</h3>
+            <p class="product-desc">
+              Smart pathing, anti‑AFK, and configurable farming loops for grind‑heavy Roblox experiences.
+            </p>
+            <div class="product-meta-row">
+              <span>Games supported: <strong>8+</strong></span>
+              <span>Config presets: <strong>15</strong></span>
+            </div>
+            <div class="product-price-row">
+              <div class="product-price">$7.49</div>
+              <button class="btn-ghost">Instant Download</button>
+            </div>
+          </article>
+
+          <article class="product-card">
+            <div class="product-tag-row">
+              <span class="product-tag">Utility</span>
+              <span>Updated: 2026‑05</span>
+            </div>
+            <h3 class="product-title">JJK Visual ESP & Radar</h3>
+            <p class="product-desc">
+              Clean ESP overlays, player radar, and customizable highlights with minimal performance impact.
+            </p>
+            <div class="product-meta-row">
+              <span>FPS drop: <strong>&lt; 5%</strong></span>
+              <span>Presets: <strong>10</strong></span>
+            </div>
+            <div class="product-price-row">
+              <div class="product-price">$6.99</div>
+              <button class="btn-ghost">Instant Download</button>
+            </div>
+          </article>
+
+          <article class="product-card">
+            <div class="product-tag-row">
+              <span class="product-tag">Bundle</span>
+              <span>Updated: 2026‑05</span>
+            </div>
+            <h3 class="product-title">JJK Ultimate Script Pack</h3>
+            <p class="product-desc">
+              All current JJK scripts in one bundle—plus future additions included at no extra cost.
+            </p>
+            <div class="product-meta-row">
+              <span>Scripts included: <strong>10+</strong></span>
+              <span>Future updates: <strong>Free</strong></span>
+            </div>
+            <div class="product-price-row">
+              <div class="product-price">$19.99</div>
+              <button class="btn-ghost">Instant Download</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="featured-strip">
+          <div>
+            <div class="featured-label">🔥 Most downloaded this week</div>
+            <div class="featured-title">JJK Universal Combat Script</div>
+            <div class="featured-meta">
+              Trusted by competitive players for smooth, low‑lag performance and frequent updates.
+            </div>
+          </div>
+          <div>
+            <div class="pill">
+              <span class="pill-dot"></span>
+              1‑click load (executor‑ready)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="why">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Why JJK DIGITAL MARKETPLACE?</div>
+            <div class="section-subtitle">
+              Not just random scripts—curated, tested, and maintained for real players.
+            </div>
+          </div>
+        </div>
+
+        <div class="benefits-grid">
+          <div class="benefit-card">
+            <div class="benefit-icon">⚡</div>
+            <div>
+              <div class="benefit-title">Instant digital delivery</div>
+              <div class="benefit-text">
+                As soon as you purchase, your script files and loadstrings are available—no waiting, no manual sending.
+              </div>
+            </div>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">🛡️</div>
+            <div>
+              <div class="benefit-title">Actively maintained</div>
+              <div class="benefit-text">
+                When games update, we push fixes. Your purchase includes ongoing compatibility updates for supported titles.
+              </div>
+            </div>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">🎛️</div>
+            <div>
+              <div class="benefit-title">Clean UI & configs</div>
+              <div class="benefit-text">
+                Modern UIs, organized settings, and ready‑made presets so you can tweak behavior without touching code.
+              </div>
+            </div>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">📦</div>
+            <div>
+              <div class="benefit-title">Bundle‑friendly</div>
+              <div class="benefit-text">
+                Grab individual scripts or full packs. Bundles include future additions to keep your setup stacked.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="trust">
+        <div class="section-header">
+          <div>
+            <div class="section-title">What players say</div>
+            <div class="section-subtitle">
+              Early testers and buyers sharing their experience with JJK scripts.
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonials">
+          <article class="testimonial-card">
+            <div class="testimonial-header">
+              <div class="avatar-ring">K</div>
+              <div>
+                <div class="testimonial-name">Kairo</div>
+                <div class="testimonial-role">Ranked player</div>
+              </div>
+            </div>
+            <p class="testimonial-text">
+              “The combat script feels smooth, not jittery. Hit detection is way more consistent than anything I used before.”
+            </p>
+          </article>
+
+          <article class="testimonial-card">
+            <div class="testimonial-header">
+              <div class="avatar-ring">L</div>
+              <div>
+                <div class="testimonial-name">Luna</div>
+                <div class="testimonial-role">Grinder</div>
+              </div>
+            </div>
+            <p class="testimonial-text">
+              “Auto‑Farm Pro basically runs my grind while I do homework. The anti‑AFK is super reliable.”
+            </p>
+          </article>
+
+          <article class="testimonial-card">
+            <div class="testimonial-header">
+              <div class="avatar-ring">R</div>
+              <div>
+                <div class="testimonial-name">Rex</div>
+                <div class="testimonial-role">Script enthusiast</div>
+              </div>
+            </div>
+            <p class="testimonial-text">
+              “I like that everything is in one place. One hub, one style, and the updates actually drop when games change.”
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <div>© <span id="year"></span> JJK DIGITAL MARKETPLACE — Roblox Scripts</div>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Discord (soon)</a>
+          <a href="#" class="footer-link">Terms</a>
+          <a href="#" class="footer-link">Support</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      function scrollToProducts() {
+        document.getElementById("products").scrollIntoView({ behavior: "smooth" });
+      }
+
+      function scrollToWhy() {
+        document.getElementById("why").scrollIntoView({ behavior: "smooth" });
+      }
+    </script>
+</body>
+</html>
