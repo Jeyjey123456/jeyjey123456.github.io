@@ -525,6 +525,186 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Modal chỉnh sửa thông tin trang dành cho Admin */}
+        {isEditingBranding && isAdmin && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="branding-modal-title"
+            onClick={() => setIsEditingBranding(false)}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 text-[#2563eb] flex items-center justify-center shrink-0">
+                    <Edit3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 id="branding-modal-title" className="text-base font-extrabold text-slate-900">
+                      Chỉnh sửa thông tin trang
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Dành cho Admin · Thay đổi tên trang, người tạo, phiên bản và logo
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingBranding(false)}
+                  aria-label="Đóng cửa sổ"
+                  className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveBranding} className="space-y-4">
+                {/* Logo / Biểu tượng */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Logo / Biểu tượng trang
+                  </label>
+                  <div className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1 overflow-hidden shrink-0">
+                      {editLogoUrl ? (
+                        <img
+                          src={editLogoUrl}
+                          alt="Logo xem trước"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      ) : (
+                        <svg viewBox="0 0 64 64" className="w-full h-full" aria-hidden="true">
+                          <circle cx="32" cy="32" r="29" fill="#fff" stroke="#dc2626" strokeWidth="3.5" />
+                          <circle cx="32" cy="32" r="23" fill="#eff6ff" stroke="#0284c7" strokeWidth="1.5" strokeDasharray="3 2" />
+                          <path d="M16 40 C22 37, 28 38, 32 41 C36 38, 42 37, 48 40 L48 45 C42 42, 36 43, 32 46 C28 43, 22 42, 16 45 Z" fill="#0284c7" />
+                          <path d="M32 16 C35 21, 37 24, 34 29 C36 27, 37 30, 32 34 C27 30, 28 27, 30 29 C27 24, 29 21, 32 16 Z" fill="#ef4444" />
+                          <rect x="30.5" y="33" width="3" height="7" rx="1" fill="#dc2626" />
+                        </svg>
+                      )}
+                    </div>
+
+                    <div className="flex-1 space-y-1.5">
+                      <input
+                        ref={brandingLogoInputRef}
+                        type="file"
+                        accept="image/*"
+                        aria-label="Tải ảnh logo từ máy"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoUpload(file);
+                        }}
+                        className="sr-only"
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => brandingLogoInputRef.current?.click()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-xs font-semibold text-slate-700 cursor-pointer transition-colors"
+                        >
+                          <Image className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Tải ảnh mới</span>
+                        </button>
+                        {editLogoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setEditLogoUrl('')}
+                            className="px-2.5 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer transition-colors"
+                          >
+                            Dùng logo mặc định
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Hỗ trợ PNG, JPG, SVG hoặc WebP vuông tỉ lệ 1:1
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tên trang web */}
+                <div>
+                  <label htmlFor="edit-site-title" className="block text-xs font-bold text-slate-700 mb-1">
+                    Tiêu đề chính trang web
+                  </label>
+                  <input
+                    id="edit-site-title"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Ví dụ: Luyện đề Online"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                    required
+                  />
+                </div>
+
+                {/* Dòng chữ phụ / Người tạo */}
+                <div>
+                  <label htmlFor="edit-site-subtitle" className="block text-xs font-bold text-slate-700 mb-1">
+                    Dòng chữ phụ / Người tạo
+                  </label>
+                  <input
+                    id="edit-site-subtitle"
+                    type="text"
+                    value={editSubtitle}
+                    onChange={(e) => setEditSubtitle(e.target.value)}
+                    placeholder="Ví dụ: From : NguyenCongQuang"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                    required
+                  />
+                </div>
+
+                {/* Phiên bản (Version) */}
+                <div>
+                  <label htmlFor="edit-site-version" className="block text-xs font-bold text-slate-700 mb-1">
+                    Nhãn phiên bản (Badge)
+                  </label>
+                  <input
+                    id="edit-site-version"
+                    type="text"
+                    value={editVersion}
+                    onChange={(e) => setEditVersion(e.target.value)}
+                    placeholder="Ví dụ: VERSION 4.16"
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  />
+                </div>
+
+                {/* Nút thao tác */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleResetBranding}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Khôi phục mặc định</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingBranding(false)}
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Lưu thay đổi</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
