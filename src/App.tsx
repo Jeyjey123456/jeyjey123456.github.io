@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ShieldOff, ArrowLeft } from 'lucide-react';
-import { Exam, ExamAttempt } from './types/exam';
+import { Exam, ExamAttempt, SiteBranding, DEFAULT_SITE_BRANDING } from './types/exam';
 import { INITIAL_ATTEMPTS, INITIAL_EXAMS } from './data/initialExams';
 import { DashboardView } from './components/DashboardView';
 import { ExamTakeView } from './components/ExamTakeView';
@@ -15,6 +15,7 @@ import {
 
 const EXAMS_STORAGE_KEY = 'luyende_online_exams_prod_v1';
 const ATTEMPTS_STORAGE_KEY = 'luyende_online_attempts_prod_v1';
+const BRANDING_STORAGE_KEY = 'luyende_site_branding_v1';
 const LEGACY_KEYS_TO_CLEAR = [
   'baitaptracnghiem_exams_v3',
   'baitaptracnghiem_attempts_v3',
@@ -27,6 +28,7 @@ declare global {
     loginAdmin?: (key: string) => string;
     logoutAdmin?: () => string;
     setAdminKey?: (newKey: string) => string;
+    setBranding?: (branding: Partial<SiteBranding>) => string;
     ADMIN_KEY?: string;
   }
 }
@@ -94,6 +96,39 @@ export default function App() {
   const [reviewingAttempt, setReviewingAttempt] = useState<ExamAttempt | null>(null);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [branding, setBranding] = useState<SiteBranding>(() => {
+    try {
+      const saved = localStorage.getItem(BRANDING_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_SITE_BRANDING, ...parsed };
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    return DEFAULT_SITE_BRANDING;
+  });
+
+  const handleUpdateBranding = useCallback((newBranding: Partial<SiteBranding>) => {
+    setBranding((prev) => {
+      const updated = { ...prev, ...newBranding };
+      try {
+        localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  }, []);
+
+  // Sync document title with branding
+  useEffect(() => {
+    if (branding.title) {
+      document.title = `${branding.title} - ${branding.subtitle}`;
+    }
+  }, [branding]);
 
   // Load static ./exams.json if deployed on GitHub Pages (public/exams.json)
   useEffect(() => {
@@ -209,6 +244,14 @@ export default function App() {
       }
       localStorage.setItem(CUSTOM_ADMIN_KEY_STORAGE, newKey.trim());
       return `✅ Đã cập nhật Admin Key mới thành công!`;
+    };
+
+    window.setBranding = (newBranding: Partial<SiteBranding>) => {
+      if (!isAdmin) {
+        return '❌ Bạn cần đăng nhập Admin trước khi đổi thông tin trang (tiêu đề, tên tác giả, phiên bản, logo).';
+      }
+      handleUpdateBranding(newBranding);
+      return `✅ Đã cập nhật thông tin trang thành công!`;
     };
 
     try {
@@ -448,6 +491,8 @@ export default function App() {
             exams={exams}
             attempts={attempts}
             isAdmin={isAdmin}
+            branding={branding}
+            onUpdateBranding={handleUpdateBranding}
             isLibraryOpen={isLibraryOpen}
             onOpenLibrary={handleOpenLibrary}
             onCloseLibrary={handleCloseLibrary}
@@ -480,6 +525,7 @@ export default function App() {
 
         {activeView === 'create-exam' && isAdmin && (
           <CreateExamView
+            branding={branding}
             editingExam={editingExam}
             onSaveExam={handleSaveExam}
             onCancel={() => {

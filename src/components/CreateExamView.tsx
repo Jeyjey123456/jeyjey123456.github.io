@@ -23,6 +23,8 @@ import {
   OptionKey,
   Question,
   QuestionType,
+  SiteBranding,
+  DEFAULT_SITE_BRANDING,
 } from '../types/exam';
 import {
   getQuestionTrueKeys,
@@ -77,6 +79,7 @@ const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
 };
 
 interface CreateExamViewProps {
+  branding?: SiteBranding;
   editingExam?: Exam | null;
   onSaveExam: (exam: Exam, startImmediately: boolean) => void;
   onCancel: () => void;
@@ -85,6 +88,7 @@ interface CreateExamViewProps {
 type DigitizerTab = 'docx' | 'pdf' | 'ocr' | 'text';
 
 export const CreateExamView: React.FC<CreateExamViewProps> = ({
+  branding = DEFAULT_SITE_BRANDING,
   editingExam = null,
   onSaveExam,
   onCancel,
@@ -394,7 +398,7 @@ export const CreateExamView: React.FC<CreateExamViewProps> = ({
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 font-medium truncate">
-                Luyện đề Online · From : NguyenCongQuang
+                {branding.title} · {branding.subtitle}
               </p>
             </div>
           </div>

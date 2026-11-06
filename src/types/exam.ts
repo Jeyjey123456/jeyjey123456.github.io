@@ -103,4 +103,18 @@ export interface ExamAttempt {
   questionsSnapshot?: Question[];
 }
 
+export interface SiteBranding {
+  title: string;
+  subtitle: string;
+  version: string;
+  logoUrl?: string; // custom uploaded image data URI or empty for default svg emblem
+}
+
+export const DEFAULT_SITE_BRANDING: SiteBranding = {
+  title: 'Luyện đề Online',
+  subtitle: 'From : NguyenCongQuang',
+  version: 'VERSION 4.16',
+  logoUrl: '',
+};
+
 
