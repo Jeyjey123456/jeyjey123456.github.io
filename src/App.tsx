@@ -1,0 +1,494 @@
+import { useState, useEffect, useCallback } from 'react';
+import { ShieldOff, ArrowLeft } from 'lucide-react';
+import { Exam, ExamAttempt } from './types/exam';
+import { INITIAL_ATTEMPTS, INITIAL_EXAMS } from './data/initialExams';
+import { DashboardView } from './components/DashboardView';
+import { ExamTakeView } from './components/ExamTakeView';
+import { CreateExamView } from './components/CreateExamView';
+import {
+  ADMIN_STORAGE_KEY,
+  CUSTOM_ADMIN_KEY_STORAGE,
+  DEFAULT_ADMIN_KEY,
+  resolveAppRoute,
+  verifyAdminKey,
+} from './utils/accessControl';
+
+const EXAMS_STORAGE_KEY = 'luyende_online_exams_prod_v1';
+const ATTEMPTS_STORAGE_KEY = 'luyende_online_attempts_prod_v1';
+const LEGACY_KEYS_TO_CLEAR = [
+  'baitaptracnghiem_exams_v3',
+  'baitaptracnghiem_attempts_v3',
+  'luyende_manual_done_exams_v1',
+];
+
+declare global {
+  interface Window {
+    admin?: (key: string) => string;
+    loginAdmin?: (key: string) => string;
+    logoutAdmin?: () => string;
+    setAdminKey?: (newKey: string) => string;
+    ADMIN_KEY?: string;
+  }
+}
+
+function getBasePathname(): string {
+  const path = window.location.pathname.replace(/\/index\.html$/i, '');
+  const stripped = path
+    .replace(/\/(?:lam-bai|de)\/[^/]+\/?$/i, '')
+    .replace(/\/(?:nguoi-dung\/)?tao-de\/?$/i, '')
+    .replace(/\/thu-vien\/?$/i, '')
+    .replace(/\/nguoi-dung\/?$/i, '');
+  const clean = stripped.replace(/\/+$/, '');
+  return clean ? `${clean}/` : '/';
+}
+
+export default function App() {
+  const [exams, setExams] = useState<Exam[]>(() => {
+    try {
+      LEGACY_KEYS_TO_CLEAR.forEach((k) => localStorage.removeItem(k));
+      const saved = localStorage.getItem(EXAMS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback to initial exams
+    }
+    return INITIAL_EXAMS;
+  });
+
+  const [attempts, setAttempts] = useState<ExamAttempt[]>(() => {
+    try {
+      const saved = localStorage.getItem(ATTEMPTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Fallback to initial attempts
+    }
+    return INITIAL_ATTEMPTS;
+  });
+
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem(ADMIN_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [activeView, setActiveView] = useState<
+    'dashboard' | 'take-exam' | 'create-exam' | 'forbidden'
+  >('dashboard');
+  const [isLibraryOpen, setIsLibraryOpen] = useState<boolean>(false);
+  const [forbiddenReason, setForbiddenReason] = useState<string>('');
+  const [activeExamId, setActiveExamId] = useState<string>(
+    INITIAL_EXAMS[0]?.id || ''
+  );
+  const [previewMode, setPreviewMode] = useState<boolean>(false);
+  const [reviewingAttempt, setReviewingAttempt] = useState<ExamAttempt | null>(null);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Load static ./exams.json if deployed on GitHub Pages (public/exams.json)
+  useEffect(() => {
+    let cancelled = false;
+    fetch('./exams.json', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((remoteExams) => {
+        if (cancelled || !Array.isArray(remoteExams) || remoteExams.length === 0) {
+          return;
+        }
+        setExams((prev) => {
+          const existingIds = new Set(prev.map((e) => e.id));
+          const merged = [...prev];
+          for (const item of remoteExams) {
+            if (item && typeof item.id === 'string' && !existingIds.has(item.id)) {
+              merged.push(item as Exam);
+            }
+          }
+          return merged;
+        });
+      })
+      .catch(() => {
+        // Ignore if ./exams.json is not present
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const syncRouteFromLocation = useCallback(
+    (currentExams: Exam[], currentIsAdmin: boolean) => {
+      const resolved = resolveAppRoute(
+        window.location.pathname,
+        window.location.search,
+        currentExams,
+        currentIsAdmin
+      );
+
+      if (resolved.type === 'dashboard') {
+        setActiveView('dashboard');
+        if (typeof resolved.openLibrary === 'boolean') {
+          setIsLibraryOpen(resolved.openLibrary);
+        }
+        setForbiddenReason('');
+      } else if (resolved.type === 'take-exam') {
+        setActiveExamId(resolved.examId);
+        setPreviewMode(Boolean(resolved.previewOnly));
+        setReviewingAttempt(null);
+        setActiveView('take-exam');
+        setForbiddenReason('');
+      } else if (resolved.type === 'create-exam') {
+        setActiveView('create-exam');
+        setForbiddenReason('');
+      } else {
+        setActiveView('forbidden');
+        setForbiddenReason(resolved.reason);
+      }
+    },
+    []
+  );
+
+  // Sync URL on mount and browser popstate
+  useEffect(() => {
+    syncRouteFromLocation(exams, isAdmin);
+    const onPopState = () => syncRouteFromLocation(exams, isAdmin);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [exams, isAdmin, syncRouteFromLocation]);
+
+  // Register DevTools Console-only Admin authentication commands
+  useEffect(() => {
+    const authenticateWithKey = (inputKey: string): string => {
+      const customSaved = localStorage.getItem(CUSTOM_ADMIN_KEY_STORAGE);
+      if (verifyAdminKey(inputKey, customSaved)) {
+        try {
+          sessionStorage.setItem(ADMIN_STORAGE_KEY, 'true');
+        } catch {
+          // ignore
+        }
+        setIsAdmin(true);
+        const msg =
+          '✅ Đăng nhập Admin thành công! Quyền tạo đề, số hoá Word (.docx) và chỉnh sửa đã được mở khoá.';
+        console.info(`%c${msg}`, 'color: #22c55e; font-weight: bold; font-size: 13px;');
+        return msg;
+      }
+      const errMsg = '❌ Sai Admin Key! Bạn không có quyền tạo đề.';
+      console.error(errMsg);
+      return errMsg;
+    };
+
+    window.admin = authenticateWithKey;
+    window.loginAdmin = authenticateWithKey;
+
+    window.logoutAdmin = () => {
+      try {
+        sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+      } catch {
+        // ignore
+      }
+      setIsAdmin(false);
+      setActiveView((prev) => (prev === 'create-exam' ? 'dashboard' : prev));
+      const msg = '🔒 Đã đăng xuất quyền Admin.';
+      console.info(msg);
+      return msg;
+    };
+
+    window.setAdminKey = (newKey: string) => {
+      if (!isAdmin) {
+        return '❌ Bạn cần đăng nhập Admin trước khi đổi key.';
+      }
+      if (!newKey || newKey.trim().length < 4) {
+        return '❌ Key mới phải có ít nhất 4 ký tự.';
+      }
+      localStorage.setItem(CUSTOM_ADMIN_KEY_STORAGE, newKey.trim());
+      return `✅ Đã cập nhật Admin Key mới thành công!`;
+    };
+
+    try {
+      Object.defineProperty(window, 'ADMIN_KEY', {
+        configurable: true,
+        get() {
+          return isAdmin ? 'Đang đăng nhập Admin' : 'Nhập: admin("wangwibu2026")';
+        },
+        set(val: string) {
+          authenticateWithKey(String(val));
+        },
+      });
+    } catch {
+      // ignore if defineProperty fails
+    }
+
+    console.info(
+      `%c[Luyện đề Online - Console Admin Auth]\n%cĐể mở khoá quyền Admin tạo đề, gõ lệnh sau vào Console:\n  admin("${DEFAULT_ADMIN_KEY}")\nHoặc đăng xuất bằng: logoutAdmin()`,
+      'color: #22c55e; font-weight: bold; font-size: 13px;',
+      'color: #94a3b8; font-size: 12px;'
+    );
+  }, [isAdmin]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXAMS_STORAGE_KEY, JSON.stringify(exams));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [exams]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify(attempts));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [attempts]);
+
+  const navigateToUrl = (url: string) => {
+    window.history.pushState({}, '', url);
+    syncRouteFromLocation(exams, isAdmin);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenLibrary = () => {
+    const base = getBasePathname();
+    window.history.pushState({}, '', `${base}?view=library`);
+    setIsLibraryOpen(true);
+    setActiveView('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCloseLibrary = () => {
+    const base = getBasePathname();
+    window.history.pushState({}, '', base);
+    setIsLibraryOpen(false);
+    setActiveView('dashboard');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStartExam = (examId: string, previewOnly = false) => {
+    const base = getBasePathname();
+    const found = exams.find((e) => e.id === examId);
+    if (!found) {
+      window.history.pushState({}, '', `${base}?de=${encodeURIComponent(examId)}`);
+      setActiveView('forbidden');
+      setForbiddenReason('Link đề thi không đúng hoặc đề thi không tồn tại.');
+      return;
+    }
+    window.history.pushState({}, '', `${base}?de=${encodeURIComponent(examId)}`);
+    setActiveExamId(examId);
+    setPreviewMode(previewOnly);
+    setReviewingAttempt(null);
+    setActiveView('take-exam');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleReviewAttempt = (attempt: ExamAttempt) => {
+    const base = getBasePathname();
+    const exists = exams.some((e) => e.id === attempt.examId);
+    if (!exists) {
+      navigateToUrl(`${base}?de=${encodeURIComponent(attempt.examId)}`);
+      return;
+    }
+    window.history.pushState({}, '', `${base}?de=${encodeURIComponent(attempt.examId)}`);
+    setActiveExamId(attempt.examId);
+    setReviewingAttempt(attempt);
+    setPreviewMode(false);
+    setActiveView('take-exam');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCompleteAttempt = (newAttempt: ExamAttempt) => {
+    setAttempts((prev) => [newAttempt, ...prev]);
+  };
+
+  const handleCreateNewExam = () => {
+    const base = getBasePathname();
+    if (!isAdmin) {
+      window.history.pushState({}, '', `${base}?view=create`);
+      setActiveView('forbidden');
+      setForbiddenReason('Chỉ Admin mới được phép tạo đề thi.');
+      return;
+    }
+    window.history.pushState({}, '', `${base}?view=create`);
+    setEditingExam(null);
+    setActiveView('create-exam');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleEditExam = (exam: Exam) => {
+    const base = getBasePathname();
+    if (!isAdmin) {
+      window.history.pushState({}, '', `${base}?view=create`);
+      setActiveView('forbidden');
+      setForbiddenReason('Chỉ Admin mới được phép chỉnh sửa đề thi.');
+      return;
+    }
+    window.history.pushState({}, '', `${base}?view=create`);
+    setEditingExam(exam);
+    setActiveView('create-exam');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveExam = (savedExam: Exam, startImmediately: boolean) => {
+    if (!isAdmin) {
+      setActiveView('forbidden');
+      setForbiddenReason('Chỉ Admin mới được phép lưu đề thi.');
+      return;
+    }
+
+    const updatedExams = (() => {
+      const exists = exams.some((e) => e.id === savedExam.id);
+      if (exists) {
+        return exams.map((e) => (e.id === savedExam.id ? savedExam : e));
+      }
+      return [savedExam, ...exams];
+    })();
+
+    setExams(updatedExams);
+    setEditingExam(null);
+
+    const base = getBasePathname();
+    if (startImmediately) {
+      window.history.pushState({}, '', `${base}?de=${encodeURIComponent(savedExam.id)}`);
+      setActiveExamId(savedExam.id);
+      setPreviewMode(false);
+      setReviewingAttempt(null);
+      setActiveView('take-exam');
+    } else {
+      window.history.pushState({}, '', `${base}?view=library`);
+      setIsLibraryOpen(true);
+      setActiveView('dashboard');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleFavorite = (examId: string) => {
+    setExams((prev) =>
+      prev.map((e) => (e.id === examId ? { ...e, isFavorite: !e.isFavorite } : e))
+    );
+  };
+
+  const handleDeleteExam = (examId: string) => {
+    if (!isAdmin) return;
+    setExams((prev) => prev.filter((e) => e.id !== examId));
+  };
+
+  const handleExportExamsJson = () => {
+    const jsonString = JSON.stringify(exams, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exams.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportExamsJson = (importedExams: Exam[]) => {
+    if (!isAdmin || !Array.isArray(importedExams)) return;
+    setExams((prev) => {
+      const map = new Map<string, Exam>();
+      for (const e of prev) {
+        if (e && e.id) map.set(e.id, e);
+      }
+      for (const item of importedExams) {
+        if (item && typeof item.id === 'string' && Array.isArray(item.questions)) {
+          map.set(item.id, item);
+        }
+      }
+      return Array.from(map.values());
+    });
+  };
+
+  const currentExam = exams.find((e) => e.id === activeExamId);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900">
+      <div className="flex-1">
+        {activeView === 'forbidden' && (
+          <main className="max-w-xl mx-auto px-4 py-20 text-center">
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md shadow-slate-200/40 p-10 space-y-5">
+              <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+                <ShieldOff className="w-8 h-8" />
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                bạn không nên ở đây
+              </h1>
+
+              {forbiddenReason && (
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  {forbiddenReason}
+                </p>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleCloseLibrary}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Quay về trang chính</span>
+                </button>
+              </div>
+            </div>
+          </main>
+        )}
+
+        {activeView === 'dashboard' && (
+          <DashboardView
+            exams={exams}
+            attempts={attempts}
+            isAdmin={isAdmin}
+            isLibraryOpen={isLibraryOpen}
+            onOpenLibrary={handleOpenLibrary}
+            onCloseLibrary={handleCloseLibrary}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClearFilters={() => setSearchQuery('')}
+            onStartExam={handleStartExam}
+            onReviewAttempt={handleReviewAttempt}
+            onEditExam={handleEditExam}
+            onCreateNewExam={handleCreateNewExam}
+            onToggleFavorite={handleToggleFavorite}
+            onDeleteExam={handleDeleteExam}
+            onExportExamsJson={handleExportExamsJson}
+            onImportExamsJson={handleImportExamsJson}
+          />
+        )}
+
+        {activeView === 'take-exam' && currentExam && (
+          <ExamTakeView
+            exam={currentExam}
+            initialAttempt={reviewingAttempt}
+            previewMode={previewMode}
+            onCompleteAttempt={handleCompleteAttempt}
+            onBackToDashboard={() => {
+              setReviewingAttempt(null);
+              handleOpenLibrary();
+            }}
+          />
+        )}
+
+        {activeView === 'create-exam' && isAdmin && (
+          <CreateExamView
+            editingExam={editingExam}
+            onSaveExam={handleSaveExam}
+            onCancel={() => {
+              setEditingExam(null);
+              handleCloseLibrary();
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}

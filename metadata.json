@@ -1,0 +1,6 @@
+{
+  "name": "BaiTapTracNghiem - Hệ Thống Làm Đề & Số Hoá Đề Thi Word Online",
+  "description": "Nền tảng tạo đề, số hoá đề thi từ file Word (.docx) và chấm bài trắc nghiệm trực tuyến ngay trên trình duyệt, hoàn toàn miễn phí và không giới hạn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

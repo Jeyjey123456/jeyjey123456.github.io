@@ -1,0 +1,1049 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  Briefcase,
+  Box,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  BookOpen,
+  Info,
+  Search,
+  Plus,
+  SquarePen,
+  Trash2,
+  Link2,
+  Settings,
+  Moon,
+  Sun,
+  Terminal,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Upload,
+} from 'lucide-react';
+import { Exam, ExamAttempt, ExamCategory, LIBRARY_SUBJECTS } from '../types/exam';
+
+interface DashboardViewProps {
+  exams: Exam[];
+  attempts: ExamAttempt[];
+  isAdmin: boolean;
+  isLibraryOpen: boolean;
+  onOpenLibrary: () => void;
+  onCloseLibrary: () => void;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  onClearFilters: () => void;
+  onStartExam: (examId: string, previewOnly?: boolean) => void;
+  onReviewAttempt: (attempt: ExamAttempt) => void;
+  onEditExam: (exam: Exam) => void;
+  onCreateNewExam: () => void;
+  onToggleFavorite: (examId: string) => void;
+  onDeleteExam: (examId: string) => void;
+  onExportExamsJson?: () => void;
+  onImportExamsJson?: (exams: Exam[]) => void;
+}
+
+type SortField = 'id' | 'category' | 'title' | 'date';
+type SortOrder = 'asc' | 'desc';
+
+const MANUAL_DONE_STORAGE_KEY = 'luyende_manual_done_exams_prod_v1';
+
+function normalizeSubjectCategory(cat: ExamCategory): ExamCategory {
+  if ((LIBRARY_SUBJECTS as string[]).includes(cat)) {
+    return cat;
+  }
+  if (cat === 'Lớp 12' || cat === 'Lớp 11' || cat === 'Lớp 10') {
+    return 'Lịch sử';
+  }
+  if (cat === 'Đề thi THPT') {
+    return 'Sinh học';
+  }
+  if (cat === 'Đại Học') {
+    return 'Toán';
+  }
+  return 'Lịch sử';
+}
+
+export const DashboardView: React.FC<DashboardViewProps> = ({
+  exams,
+  attempts,
+  isAdmin,
+  isLibraryOpen,
+  onOpenLibrary,
+  onCloseLibrary,
+  searchQuery,
+  onSearchChange,
+  onStartExam,
+  onReviewAttempt,
+  onEditExam,
+  onCreateNewExam,
+  onDeleteExam,
+  onExportExamsJson,
+  onImportExamsJson,
+}) => {
+  const [filterNotDone, setFilterNotDone] = useState<boolean>(true);
+  const [filterDone, setFilterDone] = useState<boolean>(true);
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState<boolean>(false);
+  const jsonInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Mặc định lúc mới mở thư viện không tích chọn toàn bộ đề các môn
+  const [selectedSubjects, setSelectedSubjects] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    LIBRARY_SUBJECTS.forEach((s) => {
+      map[s] = false;
+    });
+    return map;
+  });
+
+  useEffect(() => {
+    if (isLibraryOpen) {
+      const resetMap: Record<string, boolean> = {};
+      LIBRARY_SUBJECTS.forEach((s) => {
+        resetMap[s] = false;
+      });
+      setSelectedSubjects(resetMap);
+      setMobileFiltersExpanded(false);
+    }
+  }, [isLibraryOpen]);
+
+  const [manualDoneMap, setManualDoneMap] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(MANUAL_DONE_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return {};
+  });
+
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [copiedExamId, setCopiedExamId] = useState<string | null>(null);
+  const [showAdminHint, setShowAdminHint] = useState<boolean>(false);
+  const [darkAccent, setDarkAccent] = useState<boolean>(false);
+
+  const toggleManualDone = (examId: string) => {
+    setManualDoneMap((prev) => {
+      const next = { ...prev, [examId]: !prev[examId] };
+      try {
+        localStorage.setItem(MANUAL_DONE_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const toggleSubject = (subject: string) => {
+    setSelectedSubjects((prev) => ({
+      ...prev,
+      [subject]: !prev[subject],
+    }));
+  };
+
+  const clearAllSubjectFilters = () => {
+    const resetMap: Record<string, boolean> = {};
+    LIBRARY_SUBJECTS.forEach((s) => {
+      resetMap[s] = false;
+    });
+    setSelectedSubjects(resetMap);
+  };
+
+  const handleSortClick = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const handleCopyExamLink = (examId: string) => {
+    const basePath = window.location.pathname
+      .replace(/\/index\.html$/i, '')
+      .replace(/\/(?:thu-vien|(?:nguoi-dung\/)?tao-de)\/?$/i, '')
+      .replace(/\/+$/, '');
+    const url = `${window.location.origin}${basePath}/?de=${encodeURIComponent(examId)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).catch(() => {});
+    }
+    setCopiedExamId(examId);
+    window.setTimeout(() => {
+      setCopiedExamId((prev) => (prev === examId ? null : prev));
+    }, 2000);
+  };
+
+  const handleJsonFileUpload = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed) && onImportExamsJson) {
+        onImportExamsJson(parsed as Exam[]);
+      }
+    } catch {
+      // ignore invalid json
+    } finally {
+      if (jsonInputRef.current) {
+        jsonInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Compute subject counts across all exams
+  const subjectCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    LIBRARY_SUBJECTS.forEach((s) => {
+      counts[s] = 0;
+    });
+    exams.forEach((exam) => {
+      const subj = normalizeSubjectCategory(exam.category);
+      counts[subj] = (counts[subj] || 0) + 1;
+    });
+    return counts;
+  }, [exams]);
+
+  // Map latest attempt per examId
+  const latestAttemptByExamId = useMemo(() => {
+    const map: Record<string, ExamAttempt> = {};
+    for (const att of attempts) {
+      if (!map[att.examId]) {
+        map[att.examId] = att;
+      }
+    }
+    return map;
+  }, [attempts]);
+
+  const selectedSubjectCount = useMemo(
+    () => LIBRARY_SUBJECTS.filter((s) => Boolean(selectedSubjects[s])).length,
+    [selectedSubjects]
+  );
+
+  // Filter and sort exams for Thư Viện Đề Thi
+  const filteredExams = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const hasActiveSubjectFilter = selectedSubjectCount > 0;
+
+    const list = exams.filter((exam) => {
+      const subj = normalizeSubjectCategory(exam.category);
+      if (hasActiveSubjectFilter && !selectedSubjects[subj]) return false;
+
+      const hasAttempt = Boolean(latestAttemptByExamId[exam.id]);
+      const isDone = hasAttempt || Boolean(manualDoneMap[exam.id]);
+
+      if (isDone && !filterDone) return false;
+      if (!isDone && !filterNotDone) return false;
+
+      if (q) {
+        const code = (exam.examCode || exam.id).toLowerCase();
+        const matchTitle = exam.title.toLowerCase().includes(q);
+        const matchSubj = subj.toLowerCase().includes(q);
+        const matchCode = code.includes(q);
+        if (!matchTitle && !matchSubj && !matchCode) return false;
+      }
+
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      if (sortField === 'id') {
+        const codeA = a.examCode || a.id;
+        const codeB = b.examCode || b.id;
+        return codeA.localeCompare(codeB) * dir;
+      }
+      if (sortField === 'category') {
+        const catA = normalizeSubjectCategory(a.category);
+        const catB = normalizeSubjectCategory(b.category);
+        return catA.localeCompare(catB, 'vi') * dir;
+      }
+      if (sortField === 'title') {
+        return a.title.localeCompare(b.title, 'vi') * dir;
+      }
+      // Sort by upload date/time
+      const parseDateScore = (e: Exam) => {
+        const [d = '01', m = '01', y = '2026'] = (e.createdAt || '').split('/');
+        const [hh = '00', mm = '00'] = (e.uploadTime || '11:00').split(':');
+        return Number(`${y}${m.padStart(2, '0')}${d.padStart(2, '0')}${hh.padStart(2, '0')}${mm.padStart(2, '0')}`);
+      };
+      return (parseDateScore(a) - parseDateScore(b)) * dir;
+    });
+  }, [
+    exams,
+    selectedSubjects,
+    selectedSubjectCount,
+    latestAttemptByExamId,
+    manualDoneMap,
+    filterDone,
+    filterNotDone,
+    searchQuery,
+    sortField,
+    sortOrder,
+  ]);
+
+  // VIEW 1: Centered Landing Card (Reference Image 1)
+  if (!isLibraryOpen) {
+    return (
+      <main
+        className={`min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 relative transition-colors ${
+          darkAccent ? 'bg-slate-900 text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+        }`}
+      >
+        {/* Top-Right Utility Buttons */}
+        <div className="fixed top-3.5 right-4 sm:top-4 sm:right-5 flex items-center gap-2 z-20">
+          <button
+            type="button"
+            onClick={() => setShowAdminHint((prev) => !prev)}
+            aria-label="Cài đặt hệ thống"
+            title="Thông tin hệ thống & Quyền Admin"
+            className="w-10 h-10 rounded-full bg-white border border-slate-200/90 shadow-xs flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDarkAccent((prev) => !prev)}
+            aria-label="Đổi giao diện sáng tối"
+            title="Đổi nền sáng / tối"
+            className="w-10 h-10 rounded-full bg-white border border-slate-200/90 shadow-xs flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            {darkAccent ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
+
+        {showAdminHint && (
+          <div className="fixed top-16 right-4 sm:right-5 z-30 max-w-xs bg-white text-slate-800 rounded-2xl border border-slate-200 shadow-lg p-4 text-xs space-y-2">
+            <div className="font-bold text-slate-900 flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Trạng thái quyền hạn</span>
+            </div>
+            {isAdmin ? (
+              <p className="text-emerald-700 font-medium">
+                Đang bật quyền <strong>Admin</strong>. Nút "MỞ CÔNG CỤ TẠO ĐỀ" đã được hiển thị.
+              </p>
+            ) : (
+              <p className="text-slate-600 leading-relaxed">
+                Chỉ Admin mới có quyền tạo đề thi. Mở DevTools Console (F12) và nhập lệnh{' '}
+                <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-900">
+                  admin(&quot;...&quot;)
+                </code>{' '}
+                để mở khoá công cụ tạo đề.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Main Centered Card */}
+        <div className="w-full max-w-[780px] bg-white text-slate-900 rounded-3xl border border-slate-200/80 shadow-xl shadow-slate-200/50 p-6 sm:p-11 my-10">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 items-center">
+            {/* Left Branding & Admin Tool Column */}
+            <div className="md:col-span-5 md:border-r md:border-slate-200/80 md:pr-8 flex flex-col items-center md:items-start text-center md:text-left">
+              {/* Emblem Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-center mb-4 sm:mb-5 p-1.5">
+                <svg
+                  viewBox="0 0 64 64"
+                  className="w-full h-full"
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="29"
+                    fill="#fff"
+                    stroke="#dc2626"
+                    strokeWidth="3.5"
+                  />
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="23"
+                    fill="#eff6ff"
+                    stroke="#0284c7"
+                    strokeWidth="1.5"
+                    strokeDasharray="3 2"
+                  />
+                  {/* Open Book */}
+                  <path
+                    d="M16 40 C22 37, 28 38, 32 41 C36 38, 42 37, 48 40 L48 45 C42 42, 36 43, 32 46 C28 43, 22 42, 16 45 Z"
+                    fill="#0284c7"
+                  />
+                  {/* Torch / Flame */}
+                  <path
+                    d="M32 16 C35 21, 37 24, 34 29 C36 27, 37 30, 32 34 C27 30, 28 27, 30 29 C27 24, 29 21, 32 16 Z"
+                    fill="#ef4444"
+                  />
+                  <rect x="30.5" y="33" width="3" height="7" rx="1" fill="#dc2626" />
+                </svg>
+              </div>
+
+              <h1 className="text-2xl sm:text-[26px] font-extrabold text-[#1e293b] leading-tight tracking-tight">
+                Luyện đề Online
+              </h1>
+
+              <p className="text-sm font-medium text-slate-500 mt-1.5">
+                From : NguyenCongQuang
+              </p>
+
+              <span className="mt-3 inline-block px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200/60 text-slate-600 text-[11px] font-bold tracking-wider uppercase">
+                VERSION 4.16
+              </span>
+
+              {/* MỞ CÔNG CỤ TẠO ĐỀ - Only visible to Admin */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={onCreateNewExam}
+                  className="mt-5 md:mt-7 w-full md:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 md:py-2.5 rounded-xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50 text-[#2563eb] text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                >
+                  <Box className="w-4 h-4" />
+                  <span>MỞ CÔNG CỤ TẠO ĐỀ</span>
+                </button>
+              )}
+            </div>
+
+            {/* Right Action Column - Only keeping Open Exam Library */}
+            <div className="md:col-span-7 flex flex-col justify-center space-y-3.5 sm:space-y-4">
+              <button
+                type="button"
+                onClick={onOpenLibrary}
+                className="w-full min-h-[52px] py-4 px-6 rounded-xl bg-[#2563eb] hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm uppercase tracking-wide shadow-md shadow-blue-600/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+              >
+                <Briefcase className="w-4 h-4 shrink-0" />
+                <span>MỞ THƯ VIỆN ĐỀ THI</span>
+              </button>
+
+              <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3 text-center">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Hiện có <strong className="text-slate-700">{exams.length} đề thi</strong> trong thư viện · Hỗ trợ Trắc nghiệm, Đúng/Sai và Trả lời ngắn
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // VIEW 2: Thư Viện Đề Thi (Responsive Mobile + Desktop)
+  return (
+    <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900">
+      <input
+        ref={jsonInputRef}
+        type="file"
+        accept=".json,application/json"
+        aria-label="Nhập dữ liệu đề thi (.json)"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleJsonFileUpload(f);
+        }}
+        className="sr-only"
+      />
+
+      {/* Top Library Header */}
+      <header className="bg-white border-b border-slate-200 px-3.5 sm:px-6 py-2.5 sm:py-3.5 sticky top-0 z-30">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-[#2563eb] flex items-center justify-center shrink-0">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-extrabold text-slate-800 leading-tight truncate">
+                Thư Viện Đề Thi
+              </h1>
+              <p className="text-[11px] sm:text-xs font-medium text-emerald-500 truncate">
+                Đã đồng bộ xong dữ liệu
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Desktop Quick Search Input */}
+            <div className="hidden sm:block relative w-52 md:w-64">
+              <input
+                type="search"
+                aria-label="Tìm kiếm đề thi"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Tìm tên đề, mã ID..."
+                className="w-full rounded-lg border border-slate-200 bg-slate-50/80 focus:bg-white pl-3 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {isAdmin && (
+              <>
+                {onExportExamsJson && (
+                  <button
+                    type="button"
+                    onClick={onExportExamsJson}
+                    title="Xuất file exams.json để chép vào thư mục public/ khi đẩy lên GitHub Pages"
+                    className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#2563eb]" />
+                    <span>Xuất exams.json</span>
+                  </button>
+                )}
+
+                {onImportExamsJson && (
+                  <button
+                    type="button"
+                    onClick={() => jsonInputRef.current?.click()}
+                    title="Nhập dữ liệu đề thi từ file .json"
+                    className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Nhập .json</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={onCreateNewExam}
+                  className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">TẠO ĐỀ MỚI</span>
+                  <span className="sm:hidden">TẠO ĐỀ</span>
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={onCloseLibrary}
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200/80 text-slate-700 text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>QUAY LẠI</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Search & Filter Toggle Row (Only visible on < sm / < lg) */}
+        <div className="mt-2.5 flex items-center gap-2 lg:hidden">
+          <div className="relative flex-1 sm:hidden">
+            <input
+              type="search"
+              aria-label="Tìm kiếm đề thi trên điện thoại"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Tìm tên đề, môn học, mã ID..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 focus:bg-white pl-3 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+            />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileFiltersExpanded((prev) => !prev)}
+            aria-expanded={mobileFiltersExpanded}
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-colors cursor-pointer shrink-0 ${
+              selectedSubjectCount > 0 || mobileFiltersExpanded
+                ? 'bg-blue-50 border-blue-200 text-[#2563eb]'
+                : 'bg-white border-slate-200 text-slate-700'
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>
+              Bộ lọc môn{selectedSubjectCount > 0 ? ` (${selectedSubjectCount})` : ''}
+            </span>
+            {mobileFiltersExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* Main 2-Column Content */}
+      <div className="flex-1 flex flex-col lg:flex-row">
+        {/* Left Sidebar Filters (Always visible on lg+, toggleable on mobile) */}
+        <aside
+          className={`${
+            mobileFiltersExpanded ? 'block' : 'hidden'
+          } lg:block w-full lg:w-[250px] shrink-0 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 sm:p-5 space-y-5 lg:space-y-6`}
+        >
+          {/* TRẠNG THÁI LÀM BÀI */}
+          <div>
+            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>TRẠNG THÁI LÀM BÀI</span>
+            </div>
+            <div className="flex flex-wrap lg:flex-col gap-4 lg:gap-2.5">
+              <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filterNotDone}
+                  onChange={() => setFilterNotDone(!filterNotDone)}
+                  className="w-4 h-4 rounded border-slate-300 text-[#2563eb] accent-[#2563eb] cursor-pointer"
+                />
+                <span>Chưa làm</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filterDone}
+                  onChange={() => setFilterDone(!filterDone)}
+                  className="w-4 h-4 rounded border-slate-300 text-[#2563eb] accent-[#2563eb] cursor-pointer"
+                />
+                <span>Đã làm / Ngoài</span>
+              </label>
+            </div>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* MÔN HỌC */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>MÔN HỌC</span>
+              </div>
+              {selectedSubjectCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAllSubjectFilters}
+                  className="text-[11px] font-bold text-[#2563eb] hover:underline cursor-pointer"
+                >
+                  Bỏ chọn ({selectedSubjectCount})
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2.5">
+              {LIBRARY_SUBJECTS.map((subject) => {
+                const count = subjectCounts[subject] || 0;
+                const isChecked = Boolean(selectedSubjects[subject]);
+                return (
+                  <label
+                    key={subject}
+                    className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-700 cursor-pointer select-none hover:text-slate-900 py-1 lg:py-0"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSubject(subject)}
+                        className="w-4 h-4 rounded border-slate-300 text-[#2563eb] accent-[#2563eb] cursor-pointer shrink-0"
+                      />
+                      <span className="truncate">{subject}</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[11px] font-bold tabular-nums shrink-0">
+                      {count}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Content Area */}
+        <main className="flex-1 p-3.5 sm:p-6 overflow-x-hidden">
+          {/* Quick Horizontal Subject Chips on Mobile (< lg) */}
+          <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-2.5 mb-2 no-scrollbar">
+            <button
+              type="button"
+              onClick={clearAllSubjectFilters}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                selectedSubjectCount === 0
+                  ? 'bg-[#2563eb] text-white shadow-2xs'
+                  : 'bg-white border border-slate-200 text-slate-600'
+              }`}
+            >
+              Tất cả ({exams.length})
+            </button>
+            {LIBRARY_SUBJECTS.map((subject) => {
+              const isSelected = Boolean(selectedSubjects[subject]);
+              const count = subjectCounts[subject] || 0;
+              return (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => toggleSubject(subject)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#2563eb] text-white shadow-2xs'
+                      : 'bg-white border border-slate-200 text-slate-700'
+                  }`}
+                >
+                  {subject} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Subheader Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5 text-xs">
+            <div className="font-semibold text-slate-700">
+              Tìm thấy{' '}
+              <span className="text-[#2563eb] font-extrabold tabular-nums">
+                {filteredExams.length}
+              </span>{' '}
+              đề thi
+            </div>
+
+            <div className="hidden md:inline-flex items-center gap-1.5 text-slate-500">
+              <span>Bấm vào tiêu đề cột để sắp xếp</span>
+              <span className="w-4 h-4 rounded bg-[#0284c7] text-white inline-flex items-center justify-center text-[10px] font-bold">
+                <Info className="w-3 h-3" />
+              </span>
+            </div>
+          </div>
+
+          {/* MOBILE CARD LIST (< md) */}
+          <div className="md:hidden space-y-3">
+            {filteredExams.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-8 text-center space-y-3">
+                <p className="text-sm text-slate-500">
+                  {exams.length === 0
+                    ? 'Chưa có đề thi nào trong thư viện.'
+                    : 'Không tìm thấy đề thi nào phù hợp với bộ lọc hiện tại.'}
+                </p>
+                {isAdmin && exams.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={onCreateNewExam}
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#2563eb] text-white text-xs font-bold cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tạo đề thi đầu tiên</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredExams.map((exam, index) => {
+                const displayCode =
+                  exam.examCode || String(10001 + index).slice(-5);
+                const subj = normalizeSubjectCategory(exam.category);
+                const latestAttempt = latestAttemptByExamId[exam.id];
+                const isManuallyDone = Boolean(manualDoneMap[exam.id]);
+                const isCompleted = Boolean(latestAttempt) || isManuallyDone;
+
+                return (
+                  <div
+                    key={exam.id}
+                    className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="px-2.5 py-1 rounded-md bg-[#f1f5f9] border border-slate-200/70 text-slate-700 text-xs font-bold whitespace-nowrap">
+                          {subj}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-400 tabular-nums">
+                          #{displayCode}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {latestAttempt ? (
+                          <button
+                            type="button"
+                            onClick={() => onReviewAttempt(latestAttempt)}
+                            className="px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold tabular-nums cursor-pointer"
+                          >
+                            {latestAttempt.scoreTen.toFixed(1)} đ ({latestAttempt.scorePercent}%)
+                          </button>
+                        ) : isManuallyDone ? (
+                          <span className="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                            Đã làm
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold">
+                            Chưa làm
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => onStartExam(exam.id, false)}
+                        className="text-left text-sm font-extrabold text-slate-900 hover:text-[#2563eb] leading-snug cursor-pointer"
+                      >
+                        {exam.title}
+                      </button>
+                      <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-400 tabular-nums">
+                        <span>{exam.questions.length} câu</span>
+                        <span>·</span>
+                        <span>{exam.durationMinutes} phút</span>
+                        <span>·</span>
+                        <span>
+                          {exam.uploadTime || '11:30'} {exam.createdAt}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onStartExam(exam.id, false)}
+                        className="flex-1 min-h-[42px] py-2.5 px-4 rounded-xl bg-[#2563eb] hover:bg-blue-700 active:scale-[0.99] text-white text-xs font-bold uppercase tracking-wide transition-all cursor-pointer"
+                      >
+                        LÀM BÀI
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleManualDone(exam.id)}
+                        aria-label={`Đánh dấu hoàn thành ${exam.title}`}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                          isCompleted
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-emerald-100/80 text-emerald-600'
+                        }`}
+                      >
+                        <Check className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyExamLink(exam.id)}
+                            aria-label={`Copy link đề ${exam.title}`}
+                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center cursor-pointer shrink-0"
+                          >
+                            {copiedExamId === exam.id ? (
+                              <Check className="w-4 h-4 text-emerald-600" />
+                            ) : (
+                              <Link2 className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onEditExam(exam)}
+                            aria-label={`Chỉnh sửa ${exam.title}`}
+                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 flex items-center justify-center cursor-pointer shrink-0"
+                          >
+                            <SquarePen className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteExam(exam.id)}
+                            aria-label={`Xoá ${exam.title}`}
+                            className="w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-rose-600 flex items-center justify-center cursor-pointer shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* DESKTOP EXAM TABLE (md+) */}
+          <div className="hidden md:block bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#f1f5f9] border-b border-slate-200 text-xs font-bold text-slate-600 select-none">
+                    <th
+                      onClick={() => handleSortClick('id')}
+                      className="py-3.5 px-5 w-24 cursor-pointer hover:text-slate-900"
+                    >
+                      ID {sortField === 'id' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th
+                      onClick={() => handleSortClick('category')}
+                      className="py-3.5 px-4 w-36 cursor-pointer hover:text-slate-900"
+                    >
+                      Môn {sortField === 'category' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th
+                      onClick={() => handleSortClick('title')}
+                      className="py-3.5 px-4 cursor-pointer hover:text-slate-900"
+                    >
+                      Tên Đề Thi {sortField === 'title' && (sortOrder === 'asc' ? '▲' : '▼')}
+                    </th>
+                    <th
+                      onClick={() => handleSortClick('date')}
+                      className="py-3.5 px-4 w-36 text-center cursor-pointer hover:text-slate-900 whitespace-nowrap"
+                    >
+                      Ngày Upload {sortField === 'date' ? (sortOrder === 'asc' ? '▲' : '▼') : '▼'}
+                    </th>
+                    <th className="py-3.5 px-4 w-32 text-center whitespace-nowrap">
+                      Kết Quả
+                    </th>
+                    <th className="py-3.5 px-5 w-44 text-center whitespace-nowrap">
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredExams.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 px-6 text-center text-sm text-slate-500">
+                        <div className="space-y-3">
+                          <p>
+                            {exams.length === 0
+                              ? 'Chưa có đề thi nào trong thư viện.'
+                              : 'Không tìm thấy đề thi nào phù hợp với bộ lọc hiện tại.'}
+                          </p>
+                          {isAdmin && exams.length === 0 && (
+                            <button
+                              type="button"
+                              onClick={onCreateNewExam}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span>Tạo đề thi đầu tiên</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredExams.map((exam, index) => {
+                      const displayCode =
+                        exam.examCode || String(10001 + index).slice(-5);
+                      const subj = normalizeSubjectCategory(exam.category);
+                      const latestAttempt = latestAttemptByExamId[exam.id];
+                      const isManuallyDone = Boolean(manualDoneMap[exam.id]);
+                      const isCompleted = Boolean(latestAttempt) || isManuallyDone;
+
+                      return (
+                        <tr
+                          key={exam.id}
+                          className="hover:bg-slate-50/80 transition-colors"
+                        >
+                          {/* ID */}
+                          <td className="py-3.5 px-5 text-xs font-semibold text-slate-500 tabular-nums">
+                            {displayCode}
+                          </td>
+
+                          {/* Môn */}
+                          <td className="py-3.5 px-4">
+                            <span className="inline-block px-3 py-1 rounded-md bg-[#f1f5f9] border border-slate-200/70 text-slate-700 text-xs font-bold whitespace-nowrap">
+                              {subj}
+                            </span>
+                          </td>
+
+                          {/* Tên Đề Thi */}
+                          <td className="py-3.5 px-4">
+                            <button
+                              type="button"
+                              onClick={() => onStartExam(exam.id, false)}
+                              className="text-left font-bold text-slate-800 hover:text-[#2563eb] transition-colors cursor-pointer"
+                            >
+                              {exam.title}
+                            </button>
+                          </td>
+
+                          {/* Ngày Upload */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <div className="text-xs font-semibold text-slate-600 tabular-nums">
+                              {exam.uploadTime || '11:30'}
+                            </div>
+                            <div className="text-[11px] italic text-slate-400 tabular-nums">
+                              {exam.createdAt}
+                            </div>
+                          </td>
+
+                          {/* Kết Quả */}
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            {latestAttempt ? (
+                              <button
+                                type="button"
+                                onClick={() => onReviewAttempt(latestAttempt)}
+                                title="Nhấn để xem lại chi tiết bài làm"
+                                className="inline-block px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer tabular-nums"
+                              >
+                                {latestAttempt.scoreTen.toFixed(1)} đ ({latestAttempt.scorePercent}%)
+                              </button>
+                            ) : isManuallyDone ? (
+                              <span className="inline-block px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                                Đã làm
+                              </span>
+                            ) : (
+                              <span className="inline-block px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold">
+                                Chưa làm
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Thao tác */}
+                          <td className="py-3.5 px-5 text-center whitespace-nowrap">
+                            <div className="inline-flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => onStartExam(exam.id, false)}
+                                className="px-3.5 py-1.5 rounded-lg bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wide transition-colors cursor-pointer"
+                              >
+                                LÀM BÀI
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleManualDone(exam.id)}
+                                aria-label={`Đánh dấu hoàn thành ${exam.title}`}
+                                title={
+                                  isCompleted
+                                    ? 'Đã hoàn thành (nhấn để đổi trạng thái)'
+                                    : 'Đánh dấu đã làm'
+                                }
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                                  isCompleted
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-emerald-100/80 hover:bg-emerald-200/80 text-emerald-600'
+                                }`}
+                              >
+                                <Check className="w-4 h-4 stroke-[2.5]" />
+                              </button>
+
+                              {isAdmin && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyExamLink(exam.id)}
+                                    aria-label={`Copy link đề ${exam.title}`}
+                                    title="Copy link trực tiếp của đề"
+                                    className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                                  >
+                                    {copiedExamId === exam.id ? (
+                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Link2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => onEditExam(exam)}
+                                    aria-label={`Chỉnh sửa ${exam.title}`}
+                                    title="Chỉnh sửa đề thi (Admin)"
+                                    className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
+                                  >
+                                    <SquarePen className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => onDeleteExam(exam.id)}
+                                    aria-label={`Xoá ${exam.title}`}
+                                    title="Xoá đề thi (Admin)"
+                                    className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};

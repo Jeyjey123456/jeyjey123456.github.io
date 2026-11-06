@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luyện đề Online - From : NguyenCongQuang</title>
+    <script>
+      (function () {
+        var path = window.location.pathname;
+        var search = window.location.search;
+        var examMatch = path.match(/^(.*)\/(?:lam-bai|de)\/([^/]+)\/?$/i);
+        if (examMatch) {
+          var base = examMatch[1] || '';
+          var examId = examMatch[2];
+          window.location.replace(base + '/?de=' + encodeURIComponent(decodeURIComponent(examId)));
+          return;
+        }
+        var libMatch = path.match(/^(.*)\/thu-vien\/?$/i);
+        if (libMatch) {
+          var libBase = libMatch[1] || '';
+          window.location.replace(libBase + '/?view=library');
+          return;
+        }
+        var createMatch = path.match(/^(.*)\/(?:nguoi-dung\/)?tao-de\/?$/i);
+        if (createMatch) {
+          var createBase = createMatch[1] || '';
+          window.location.replace(createBase + '/?view=create');
+          return;
+        }
+      })();
+    </script>
+  </head>
+  <body style="font-family: system-ui, sans-serif; background: #f8fafc; color: #0f172a; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;">
+    <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 24px; padding: 40px; text-align: center; max-width: 420px; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);">
+      <h1 style="font-size: 24px; font-weight: 800; margin: 0 0 12px;">bạn không nên ở đây</h1>
+      <p style="font-size: 14px; color: #64748b; margin: 0 0 20px;">Đường dẫn truy cập không tồn tại hoặc không hợp lệ.</p>
+      <a href="./" style="display: inline-block; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 12px;">Quay về trang chính</a>
+    </div>
+  </body>
+</html>
